@@ -1,0 +1,58 @@
+#!/usr/bin/python -t
+
+import os, importlib, jinja2
+
+def is_hidden(subpath):
+  return any((s.startswith(('.', '_')) for s in subpath.split(os.sep)))
+
+def is_to_gen(path, prefix):
+  valid = path.startswith(prefix) and path.endswith('.jinja')
+  return valid and not is_hidden(path[len(prefix):])
+
+class JinjaGenerator:
+  def __init__(self, rootdir):
+    self._filesys = jinja2.FileSystemLoader(rootdir)
+    self.env = jinja2.Environment(loader=jinja2.ChoiceLoader([self._filesys]),
+                                  trim_blocks=True, lstrip_blocks=True,
+                                  extensions=['jinja2.ext.do'])
+
+  def list_gen_templates(self, prefix=''):
+    return [s for s in self._filesys.list_templates() if is_to_gen(s, prefix)]
+
+def module_param(string):
+  a = string.split(':', 1)
+  return (a[0], a[1] if len(a) > 1 else None)
+
+def cut_input_param(args):
+  cut_input = 0 if args.root == "." or not args.input else len(args.root)
+  assert cut_input == 0 or args.input.startswith(args.root)
+  args.input = args.input[cut_input:]
+  return args
+
+def parse_args():
+  from argparse import ArgumentParser
+  parser = ArgumentParser(description='Generate files from Jinja templates')
+  parser.add_argument('output', help="Path to ouput directory")
+  parser.add_argument('-r', '--root', default='.', help="Template root")
+  parser.add_argument('-i', '--input', default='',
+                      help="Only generate from templates with path prefix")
+  parser.add_argument('-m', '--module', type=module_param,
+                      metavar='MODULE_NAME[:SUBPARAM]',
+                      dest='modules', action='append', default=[],
+                      help="add globals from module or much more!")
+  return cut_input_param(parser.parse_args())
+
+if __name__ == "__main__":
+  args = parse_args()
+  gen = JinjaGenerator(args.root)
+  for (modname, subparam) in args.modules:
+    m = importlib.import_module(modname)
+    if hasattr(m, 'jinjagen_hook'):
+      m.jinjagen_hook(gen, subparam)
+    else:
+      gen.env.globals.update({modname: m})
+  for tpath in gen.list_gen_templates(args.input):
+    this = dict(path=tpath[:-6], relroot='../' * tpath.count(os.sep))
+    output = gen.env.get_template(tpath).stream(this=this)
+    output.dump(os.path.join(args.output, this['path']), 'utf-8')
+
