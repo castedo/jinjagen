@@ -1,0 +1,48 @@
+{% extends '_base.html.jinja' %}
+
+{% block more_head %}
+<title>Hello World</title> 
+<style>
+main {
+  color: #135;
+}
+</style>
+{% endblock more_head %}
+
+{% block body %}
+<main>
+<h1>Hello World!</h1>
+
+{% filter markdown %}
+
+The following is generated from markdown:
+
+* one
+* two
+* three
+
+Call functions from any module.
+
+The `jinjagenadd` has convenient function to remove `index.html` from the end
+of URLs like automatically changing "/index.html"
+to "{{'/index.html' | index2dot}}".
+
+And filters and functions for dates: {{today() | dateformat}}
+
+{% endfilter %}
+
+<pre>
+{{'<hr>'|safe|escape}}
+</pre>
+
+Now let's include <strong>raw jinja code</strong>, but without it getting
+interpreted as jinja template at all.  To be extra wild we'll raw include the
+jinja template that generated this web page!
+<hr>
+<pre>
+{{include_raw('index.html.jinja').unescape() | escape}}
+</pre>
+<hr>
+
+</main>
+{% endblock body %}
