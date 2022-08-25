@@ -28,6 +28,5 @@ def jinjagen_hook(generator, param):
     'today': datetime.datetime.today,
     'include_raw': include_raw,
     'import': lambda path: generator.env.get_template(path).module,
-    'list_templates': lambda prefix='': generator.list_gen_templates(prefix),
   })
 
