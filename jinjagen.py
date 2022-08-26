@@ -5,47 +5,51 @@ from pathlib import Path
 
 
 class JinjaGenerator:
-    def __init__(self, source_dir_path):
+    def __init__(self, source_dir_path, dest_dir_path):
         self.source = Path(source_dir_path)
+        self.dest = Path(dest_dir_path)
         self._filesys = jinja2.FileSystemLoader(source_dir_path)
         self.env = jinja2.Environment(
             loader=jinja2.ChoiceLoader([self._filesys]),
             trim_blocks=True,
             lstrip_blocks=True,
+            keep_trailing_newline=True,
             extensions=["jinja2.ext.do"],
         )
 
-    def render_file(self, tmpl_path, dest_path, ctx):
-        tmpl = self.env.get_template(str(tmpl_path))
-        tmpl.stream(**ctx).dump(str(dest_path), "utf-8")
+    def render_file(self, tmpl_subpath, dest_filepath, ctx):
+        tmpl = self.env.get_template(str(tmpl_subpath))
+        tmpl.stream(**ctx).dump(str(dest_filepath), "utf-8")
 
-    def render_dir(self, rel_path: Path, dest_root, ctx):
-        rel_path = Path(rel_path)
-        for entry in os.listdir(self.source / rel_path):
+    def gen_file(self, src_subpath, dest_subpath, ctx):
+        os.makedirs(self.dest / dest_subpath.parent, exist_ok=True)
+        ctx = dict(ctx, this=self.site_ctx(dest_subpath))
+        self.render_file(src_subpath, self.dest / dest_subpath, ctx)
+
+    def gen_site(self):
+        self.gen_dir(Path(), dict())
+
+    def gen_dir(self, subpath, ctx):
+        for entry in os.listdir(self.source / subpath):
             if not entry.startswith((".", "_")):
-                src_path = self.source / rel_path / entry
+                src_path = self.source / subpath / entry
                 if src_path.is_dir():
-                    self.render_dir(rel_path / entry, dest_root, ctx)
+                    self.gen_dir(subpath / entry, ctx)
                 elif entry.endswith(".jinja"):
-                    ctx = dict(ctx, this=self.site_ctx(rel_path))
-                    dest_path = dest_root / rel_path / entry[:-6]
-                    os.makedirs(dest_root / rel_path, exist_ok=True)
-                    self.render_file(rel_path / entry, dest_path, ctx)
+                    self.gen_file(subpath / entry, subpath / entry[:-6], ctx)
                 else:
-                    shutil.copy(src_path, dest_root / rel_path / entry)
+                    os.makedirs(self.dest / subpath, exist_ok=True)
+                    shutil.copy(src_path, self.dest / subpath / entry)
 
-    def render_site(self, dest_root, ctx=None):
-        self.render_dir(".", dest_root, ctx if ctx else {})
-
-    def site_ctx(self, rel_path):
-        depth = len(rel_path.parents) - 1
+    def site_ctx(self, subpath):
+        depth = len(subpath.parents) - 1
         ret = {
-            "filename": rel_path.name,
-            "dirpath": str(rel_path.parent),
+            "filename": subpath.name,
+            "dirpath": str(subpath.parent),
             "relroot": "../" * depth if depth > 0 else "./",
         }
-        # when rel_path ends in "FOO/." we want path to also end in "FOO/."
-        ret["path"] = "{}/{}".format(rel_path.parent, rel_path.name)
+        # when subpath ends in "FOO/." we want path to also end in "FOO/."
+        ret["path"] = "{}/{}".format(subpath.parent, subpath.name)
         return ret
 
     def hook_module(self, modname, subparam=""):
@@ -77,5 +81,5 @@ if __name__ == "__main__":
     gen = JinjaGenerator(args.root)
     for (modname, subparam) in args.modules:
         gen.hook_module(modname, subparam)
-    gen.render_site(args.output)
+    gen.gen_site(args.output)
 
