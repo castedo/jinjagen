@@ -78,8 +78,8 @@ if __name__ == "__main__":
         help="add globals from module or much more!",
     )
     args = parser.parse_args()
-    gen = JinjaGenerator(args.root)
+    gen = JinjaGenerator(args.root, args.output)
     for (modname, subparam) in args.modules:
         gen.hook_module(modname, subparam)
-    gen.gen_site(args.output)
+    gen.gen_site()
 
