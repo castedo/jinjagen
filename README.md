@@ -17,8 +17,7 @@ Filenames `XYZ.jinja` under `srcdir` generate files called `XYZ` under
 Any file or folder whose name starts with `.` or `_` is ignored.
 You want to pair `jinja` with other tools to deal with files and folders that
 are not jinja templates.
-See [this example](example/) for my approach of using `rsync` and
-`make`.
+See [this example](example/).
 
 To hook in extra functionality from any Python module do:
 
