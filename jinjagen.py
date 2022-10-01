@@ -4,10 +4,9 @@ import importlib, jinja2, os, shutil
 from pathlib import Path
 
 
-class JinjaGenerator:
-    def __init__(self, source_dir_path, dest_dir_path):
+class JinjaGeneratorCore:
+    def __init__(self, source_dir_path):
         self.source = Path(source_dir_path)
-        self.dest = Path(dest_dir_path)
         self._filesys = jinja2.FileSystemLoader(source_dir_path)
         self.env = jinja2.Environment(
             loader=jinja2.ChoiceLoader([self._filesys]),
@@ -20,6 +19,19 @@ class JinjaGenerator:
     def render_file(self, tmpl_subpath, dest_filepath, ctx):
         tmpl = self.env.get_template(str(tmpl_subpath))
         tmpl.stream(**ctx).dump(str(dest_filepath), "utf-8")
+
+    def hook_module(self, modname, subparam=""):
+        m = importlib.import_module(modname)
+        if hasattr(m, "jinjagen_hook"):
+            m.jinjagen_hook(self, subparam)
+        else:
+            self.env.globals.update({modname: m})
+
+
+class JinjaGenerator(JinjaGeneratorCore):
+    def __init__(self, source_dir_path, dest_dir_path):
+        super().__init__(source_dir_path)
+        self.dest = Path(dest_dir_path)
 
     def gen_file(self, src_subpath, dest_subpath, ctx):
         os.makedirs(self.dest / dest_subpath.parent, exist_ok=True)
@@ -51,13 +63,6 @@ class JinjaGenerator:
         # when subpath ends in "FOO/." we want path to also end in "FOO/."
         ret["path"] = "{}/{}".format(subpath.parent, subpath.name)
         return ret
-
-    def hook_module(self, modname, subparam=""):
-        m = importlib.import_module(modname)
-        if hasattr(m, "jinjagen_hook"):
-            m.jinjagen_hook(self, subparam)
-        else:
-            self.env.globals.update({modname: m})
 
 
 def module_param(string):
