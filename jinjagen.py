@@ -27,6 +27,18 @@ class JinjaGeneratorCore:
         else:
             self.env.globals.update({modname: m})
 
+    def get_exported(self, file_path):
+        """Get variables and macros of template, but without compiling
+        template blocks"""
+
+        tmpl_path = file_path.relative_to(self.source)
+        t = self.env.get_template(str(tmpl_path))
+        # create context WITHOUT template blocks
+        ctx = jinja2.runtime.new_context(t.environment, t.name, blocks={})
+        # need to run render function to calc exported
+        list(t.root_render_func(ctx))
+        return ctx.get_exported()
+
 
 class JinjaGenerator(JinjaGeneratorCore):
     def __init__(self, source_dir_path, dest_dir_path):
@@ -72,10 +84,14 @@ def module_param(string):
 
 if __name__ == "__main__":
     from argparse import ArgumentParser
+
     parser = ArgumentParser(description="Generate files from Jinja templates")
     parser.add_argument("output", help="Path to ouput directory")
     parser.add_argument("-r", "--root", default=".", help="Source root")
-    parser.add_argument("-m", "--module", default=[],
+    parser.add_argument(
+        "-m",
+        "--module",
+        default=[],
         dest="modules",
         action="append",
         type=module_param,
@@ -87,4 +103,3 @@ if __name__ == "__main__":
     for (modname, subparam) in args.modules:
         gen.hook_module(modname, subparam)
     gen.gen_site()
-
