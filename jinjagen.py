@@ -16,7 +16,7 @@ class JinjaGeneratorCore:
             extensions=["jinja2.ext.do"],
         )
 
-    def render_file(self, tmpl_subpath, dest_filepath, ctx):
+    def render_file(self, tmpl_subpath, dest_filepath, ctx=dict()):
         tmpl = self.env.get_template(str(tmpl_subpath))
         tmpl.stream(**ctx).dump(str(dest_filepath), "utf-8")
 
@@ -45,7 +45,7 @@ class JinjaGenerator(JinjaGeneratorCore):
         super().__init__(source_dir_path)
         self.dest = Path(dest_dir_path)
 
-    def gen_file(self, src_subpath, dest_subpath, ctx):
+    def gen_file(self, src_subpath, dest_subpath, ctx=dict()):
         os.makedirs(self.dest / dest_subpath.parent, exist_ok=True)
         ctx = dict(ctx, this=self.site_ctx(dest_subpath))
         self.render_file(src_subpath, self.dest / dest_subpath, ctx)
@@ -53,7 +53,7 @@ class JinjaGenerator(JinjaGeneratorCore):
     def gen_site(self):
         self.gen_dir(Path(), dict())
 
-    def gen_dir(self, subpath, ctx):
+    def gen_dir(self, subpath, ctx=dict()):
         for entry in os.listdir(self.source / subpath):
             if not entry.startswith((".", "_")):
                 src_path = self.source / subpath / entry
