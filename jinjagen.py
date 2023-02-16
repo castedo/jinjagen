@@ -45,10 +45,13 @@ class JinjaGenerator(JinjaGeneratorCore):
         super().__init__(source_dir_path)
         self.dest = Path(dest_dir_path)
 
-    def gen_file(self, src_subpath, dest_subpath, ctx=dict()):
+    def gen_file(self, src_subpath, dest_subpath=None, ctx=dict()):
+        if dest_subpath is None:
+            dest_subpath = self.dest / Path(src_subpath).stem
         os.makedirs(self.dest / dest_subpath.parent, exist_ok=True)
         ctx = dict(ctx, this=self.site_ctx(dest_subpath))
         self.render_file(src_subpath, self.dest / dest_subpath, ctx)
+        return self.dest / dest_subpath
 
     def gen_site(self):
         self.gen_dir(Path(), dict())
