@@ -1,5 +1,6 @@
 import datetime, markdown
-from jinja2 import Markup, contextfunction
+from jinja2 import pass_context
+from markupsafe import Markup
 
 def index2dot(path):
   ok = (path != 'index.html' and path[-11:] != '/index.html')
@@ -12,8 +13,8 @@ def markdown(txt):
   marker.reset()
   return Markup(output + "\n")
 
-@contextfunction
-def include_raw(ctx,name):
+@pass_context
+def include_raw(ctx, name):
   output = ctx.environment.loader.get_source(ctx.environment, name)[0]
   return Markup(output)
 
